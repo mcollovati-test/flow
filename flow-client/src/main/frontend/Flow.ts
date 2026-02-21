@@ -563,6 +563,9 @@ export class Flow {
       params['v-ga'] = await geolocation.queryAvailability();
     }
 
+    /* Web Share API support */
+    params['v-ns'] = !!navigator.share;
+
     /* Stringify each value (they are parsed on the server side) */
     const stringParams: Record<string, string> = {};
     Object.keys(params).forEach((key) => {
