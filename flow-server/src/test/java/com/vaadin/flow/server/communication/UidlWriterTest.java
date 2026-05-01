@@ -540,8 +540,8 @@ class UidlWriterTest {
         assertDependency("context://anotherinterface-" + CSS_STYLE_NAME,
                 CSS_STYLE_NAME, dependenciesMap);
 
-        assertDependency("context://interface-" + CSS_STYLE_NAME, CSS_STYLE_NAME,
-                dependenciesMap);
+        assertDependency("context://interface-" + CSS_STYLE_NAME,
+                CSS_STYLE_NAME, dependenciesMap);
 
         assertDependency("context://" + CSS_STYLE_NAME, CSS_STYLE_NAME,
                 dependenciesMap);
