@@ -6,6 +6,7 @@ import {
 } from '@vaadin/common-frontend';
 import './Geolocation';
 import { currentVisibility } from './PageVisibility';
+import { isShareSupported } from './WebShare';
 
 export interface FlowConfig {
   imports?: () => Promise<any>;
@@ -564,7 +565,7 @@ export class Flow {
     }
 
     /* Web Share API support */
-    params['v-ns'] = !!navigator.share;
+    params['v-ws'] = isShareSupported();
 
     /* Stringify each value (they are parsed on the server side) */
     const stringParams: Record<string, string> = {};

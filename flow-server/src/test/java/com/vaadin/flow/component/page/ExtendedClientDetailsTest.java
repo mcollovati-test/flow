@@ -56,7 +56,6 @@ class ExtendedClientDetailsTest {
         assertFalse(details.isIPad());
         assertEquals(ColorScheme.Value.LIGHT, details.getColorScheme());
         assertEquals("aura", details.getThemeName());
-        assertTrue(details.isWebShareSupported());
 
         // Don't test getCurrentDate() and time delta due to the dependency on
         // server-side time
@@ -168,7 +167,6 @@ class ExtendedClientDetailsTest {
         private String navigatorPlatform = "Linux i686";
         private String colorScheme = "light";
         private String themeName = "aura";
-        private String webShareSupported = "true";
 
         public ExtendedClientDetails buildDetails() {
             return new ExtendedClientDetails(null, screenWidth, screenHeight,
@@ -176,8 +174,7 @@ class ExtendedClientDetailsTest {
                     bodyClientHeight, timezoneOffset, rawTimezoneOffset,
                     dstSavings, dstInEffect, timeZoneId, clientServerTimeDelta,
                     touchDevice, devicePixelRatio, windowName,
-                    navigatorPlatform, colorScheme, themeName,
-                    webShareSupported);
+                    navigatorPlatform, colorScheme, themeName);
         }
 
         public ExtendBuilder setScreenWidth(String screenWidth) {

@@ -71,7 +71,7 @@ class PageTest {
             this.expression = expression;
             firstParam = parameters[0];
             count++;
-            return null;
+            return Mockito.mock(PendingJavaScriptResult.class);
         }
     }
 
@@ -464,7 +464,7 @@ class PageTest {
         // Set up ExtendedClientDetails with color scheme
         ExtendedClientDetails details = new ExtendedClientDetails(mockUI, null,
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, "dark", null, null);
+                null, null, null, null, null, "dark", null);
         mockUI.getInternals().setExtendedClientDetails(details);
 
         Page page = new Page(mockUI);
@@ -472,28 +472,22 @@ class PageTest {
     }
 
     @Test
-    void share_passesCorrectJsAndParameters() {
+    void share_routesThroughClientShareModule() {
         MockUI mockUI = new MockUI();
-        ExtendedClientDetails details = new ExtendedClientDetails(mockUI, null,
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, "true");
-        mockUI.getInternals().setExtendedClientDetails(details);
+        mockUI.getInternals().setWebShareSupport(WebShareSupport.SUPPORTED);
 
         TestPage sharePage = new TestPage(mockUI);
         sharePage.share("My Title", "Some text", "https://example.com");
 
-        assertEquals("return navigator.share({title: $0, text: $1, url: $2})",
+        assertEquals("return window.Vaadin.Flow.share.share($0, $1, $2)",
                 sharePage.expression);
         assertEquals("My Title", sharePage.firstParam);
     }
 
     @Test
-    void share_throwsWhenNotSupported() {
+    void share_throwsWhenSignalReportsUnsupported() {
         MockUI mockUI = new MockUI();
-        ExtendedClientDetails details = new ExtendedClientDetails(mockUI, null,
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, "false");
-        mockUI.getInternals().setExtendedClientDetails(details);
+        mockUI.getInternals().setWebShareSupport(WebShareSupport.UNSUPPORTED);
 
         Page sharePage = new Page(mockUI);
         assertThrows(UnsupportedOperationException.class,
@@ -501,15 +495,14 @@ class PageTest {
     }
 
     @Test
-    void isShareSupported_delegatesToExtendedClientDetails() {
+    void shareSupportSignal_reflectsBootstrapValue() {
         MockUI mockUI = new MockUI();
-        ExtendedClientDetails details = new ExtendedClientDetails(mockUI, null,
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, "true");
-        mockUI.getInternals().setExtendedClientDetails(details);
-
         Page page = new Page(mockUI);
-        assertTrue(page.isShareSupported());
+        assertEquals(WebShareSupport.UNKNOWN, page.shareSupportSignal().peek());
+
+        mockUI.getInternals().setWebShareSupport(WebShareSupport.SUPPORTED);
+        assertEquals(WebShareSupport.SUPPORTED,
+                page.shareSupportSignal().peek());
     }
 
     @Test
@@ -518,7 +511,7 @@ class PageTest {
         // Set up ExtendedClientDetails
         ExtendedClientDetails details = new ExtendedClientDetails(mockUI, null,
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
         mockUI.getInternals().setExtendedClientDetails(details);
 
         Page page = new Page(mockUI) {

@@ -66,6 +66,8 @@ public class Page implements Serializable {
             PageVisibility.UNKNOWN);
     private final Signal<PageVisibility> pageVisibilityReadOnly = pageVisibilitySignal
             .asReadonly();
+    private final ValueSignal<WebShareSupport> webShareSupportSignal;
+    private final Signal<WebShareSupport> webShareSupportReadOnly;
 
     /**
      * Creates a page instance for the given UI.
@@ -80,6 +82,8 @@ public class Page implements Serializable {
                 .addEventListener("vaadin-page-visibility-change",
                         e -> setPageVisibility(e.getEventDetail(String.class)))
                 .addEventDetail().debounce(100).allowInert();
+        webShareSupportSignal = ui.getInternals().getWebShareSupportSignal();
+        webShareSupportReadOnly = webShareSupportSignal.asReadonly();
     }
 
     /**
@@ -749,27 +753,57 @@ public class Page implements Serializable {
     }
 
     /**
-     * Returns whether the browser supports the
+     * Returns a read-only signal that tracks whether the browser exposes the
      * <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Share_API">
      * Web Share API</a> ({@code navigator.share}).
+     * <p>
+     * The signal value is {@link WebShareSupport#SUPPORTED} when the browser
+     * exposes {@code navigator.share} (mobile Chromium, mobile Safari, modern
+     * Edge, recent desktop Safari) and {@link WebShareSupport#UNSUPPORTED}
+     * otherwise (most desktop Firefox builds, older browsers). The initial
+     * value is {@link WebShareSupport#UNKNOWN}; it is replaced with a real
+     * value before any user code observes the signal.
+     * <p>
+     * The signal value is seeded from the initial client bootstrap, so user
+     * code always sees a real value. Subscribe with
+     * {@code Signal.effect(owner, ...)} to react to changes; call
+     * {@code shareSupportSignal().peek()} for a snapshot outside a reactive
+     * context, and {@code .get()} inside one.
+     * <p>
+     * Web Share support is established at page load and does not change during
+     * the session, so the signal effectively transitions {@code UNKNOWN} →
+     * {@code SUPPORTED}/{@code UNSUPPORTED} once and then remains stable.
      *
-     * @return {@code true} if the browser supports the Web Share API
+     * @return the read-only Web Share support signal
      */
-    public boolean isShareSupported() {
-        return getExtendedClientDetails().isWebShareSupported();
+    public Signal<WebShareSupport> shareSupportSignal() {
+        return webShareSupportReadOnly;
     }
 
     /**
      * Invokes the browser's native share dialog using the <a href=
-     * "https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share"> Web
-     * Share API</a>.
+     * "https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share">Web
+     * Share API</a>. The dialog lets the user pick a target application
+     * (messaging, mail, social, AirDrop, …) to receive the supplied content.
+     * <p>
+     * The call is asynchronous: this method returns immediately and the browser
+     * shows the share sheet on the next event-loop turn. The returned
+     * {@link PendingJavaScriptResult} resolves when the share completes and
+     * rejects when the user cancels the sheet or the browser fails to deliver
+     * the content; rejections are logged at debug level by Flow itself, so
+     * callers do not need to attach an error handler unless they want to react
+     * in the UI.
+     * <p>
+     * Check {@link #shareSupportSignal()} before exposing a "share" control —
+     * calling this method when the value is {@link WebShareSupport#UNSUPPORTED}
+     * throws {@link UnsupportedOperationException}.
      *
      * @param title
-     *            the title to share
+     *            the title to share, may be {@code null}
      * @param text
-     *            the text to share
+     *            the text to share, may be {@code null}
      * @param url
-     *            the URL to share
+     *            the URL to share, may be {@code null}
      * @return a pending result that resolves when the share completes or
      *         rejects if the user cancels or sharing fails
      * @throws UnsupportedOperationException
@@ -777,14 +811,17 @@ public class Page implements Serializable {
      */
     public PendingJavaScriptResult share(String title, String text,
             String url) {
-        if (!isShareSupported()) {
+        if (webShareSupportSignal.peek() == WebShareSupport.UNSUPPORTED) {
             throw new UnsupportedOperationException(
                     "The browser does not support the Web Share API. "
-                            + "Check isShareSupported() before calling share().");
+                            + "Check shareSupportSignal() before calling share().");
         }
-        return executeJs(
-                "return navigator.share({title: $0, text: $1, url: $2})", title,
+        PendingJavaScriptResult result = executeJs(
+                "return window.Vaadin.Flow.share.share($0, $1, $2)", title,
                 text, url);
+        result.then(ok -> {
+        }, err -> LOGGER.debug("Web share failed: {}", err));
+        return result;
     }
 
     private Direction getDirectionByClientName(String directionClientName) {
