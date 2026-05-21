@@ -166,6 +166,21 @@ class TriggerTest {
     }
 
     @Test
+    void remove_idempotent_safeToCallTwice() {
+        UI ui = new MockUI();
+        TagComponent button = new TagComponent("button");
+        TagComponent field = new TagComponent("input");
+        ui.getElement().appendChild(button.getElement(), field.getElement());
+
+        DomEventTrigger trigger = new DomEventTrigger(button, "click");
+        trigger.triggers(new SetPropertyAction<>(field, "value", ""));
+
+        trigger.remove();
+        // Second call must not throw or affect state.
+        trigger.remove();
+    }
+
+    @Test
     void triggers_emptyActionsRejected() {
         TagComponent button = new TagComponent("button");
         DomEventTrigger trigger = new DomEventTrigger(button, "click");
